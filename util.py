@@ -299,6 +299,10 @@ def plaq_AC_func(n):
     # top right
     for i in range(n - 1):
         plaq_AC[-1].append((i + 1, 2 * n - 1))
+    for i in range(n - 1):
+        plaq_AC.append([])
+        for j in range(n - i - 1):
+            plaq_AC[-1].append((i + j + 1, i + 2 * n))
     # middle right
     for i in range(n):
         plaq_AC.append([])
@@ -343,11 +347,11 @@ def T_tensor(p):
     T_{s1 s2} = delta(s1,s2) * (p**s1)*((1-p)**(1-s1))
     It is a 2x2 diagonal matrix.
     """
-    return jnp.array([[1 - p, 0], [0, p]])
+    return jnp.array([[1 - p, 0], [0, p]])/(max(1-p, p))
 
 
 def boundary_T_tensor(p):
-    return jnp.array([1 - p, p])
+    return jnp.array([1 - p, p])/(max(1-p, p))
 
 
 def Q_tensor(m):
@@ -365,9 +369,10 @@ def Q_tensor(m):
         for s2 in (0, 1):
             for s3 in (0, 1):
                 for s4 in (0, 1):
+                    #print(s1, s2, s3, s4)
                     parity = (s1 + s2 + s3 + s4) % 2
                     # If parity matches the anyon measurement, set entry to 1.
-                    value = 1 if parity == m else 0
+                    value = 1. if parity == m else 0
                     Q = Q.at[s1, s2, s3, s4].set(value)
     return Q
 
@@ -380,10 +385,20 @@ def incomplete_Q_tensor(m):
             for s3 in (0, 1):
                 parity = (s1 + s2 + s3) % 2
                 # If parity matches the anyon measurement, set entry to 1.
-                value = 1 if parity == m else 0
+                value = 1. if parity == m else 0
                 Q = Q.at[s1, s2, s3].set(value)
     return Q
 
+def corner_Q_tensor(m):
+    Q = jnp.zeros((2, 2))
+    # Loop over all 16 combinations of {s1, s2, s3, s4}.
+    for s1 in (0, 1):
+        for s2 in (0, 1):
+            parity = (s1 + s2) % 2
+            # If parity matches the anyon measurement, set entry to 1.
+            value = 1. if parity == m else 0
+            Q = Q.at[s1, s2].set(value)
+    return Q
 
 def full_tensor(m, p):
     tensor_list = []
@@ -426,7 +441,7 @@ def corner_tensor(m, p):
     return jnp.einsum(einsum_str, *tensor_list)
 
 
-def inner_corner_tensor(m, p):
+def inner_Q_tensor(m, p):
     tensor_list = []
     Q = Q_tensor(m)
     T = T_tensor(p)
@@ -443,6 +458,14 @@ def inner_edge_tensor(m, p):
     Q = incomplete_Q_tensor(m)
     T = T_tensor(p)
     tensor_list.append(Q)
-    einsum_str = 'ijk, ia->ajk'
+    einsum_str = 'ijk, ja->iak'
 
+    return jnp.einsum(einsum_str, Q, T)
+
+def inner_corner_tensor(m, p):
+    tensor_list = []
+    Q = corner_Q_tensor(m)
+    T = T_tensor(p)
+    tensor_list.append(Q)
+    einsum_str = 'ij, ia->aj'
     return jnp.einsum(einsum_str, Q, T)
