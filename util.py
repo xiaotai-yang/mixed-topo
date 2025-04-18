@@ -263,6 +263,30 @@ def plaq_B_func(n):
             plaq_B[i].append((j+1, i+n+1))
     return plaq_B
 
+def plaq_C_func(n):
+    plaq_C = []
+    # middle left
+    for i in range(n):
+        plaq_C.append([])
+        for j in range(n - 2):
+            plaq_C[-1].append((2 * n - 1 - i, j + 1))
+    # middle top
+    for i in range(n - 1):
+        plaq_C.append([])
+        for j in range(n - i - 1):
+            plaq_C[-1].append((n - i - 1, i + 1 + j))
+    # middle right
+    for i in range(n-1, -1, -1):
+        plaq_C.append([])
+        for j in range(n - 2):
+            plaq_C[-1].append((n + i, 3 * n - j - 2))
+    # top right
+    for i in range(n - 1):
+        plaq_C.append([])
+        for j in range(n - i - 1):
+            plaq_C[-1].append((n - i - j - 1, 3 * n - i -1))
+
+    return plaq_C
 def plaq_BC_func(n):
     plaq_BC = []
     # middle left
@@ -347,11 +371,11 @@ def T_tensor(p):
     T_{s1 s2} = delta(s1,s2) * (p**s1)*((1-p)**(1-s1))
     It is a 2x2 diagonal matrix.
     """
-    return jnp.array([[1 - p, 0], [0, p]])/(max(1-p, p))
+    return jnp.sqrt(jnp.array([[1 - p, 0], [0, p]]))
 
 
 def boundary_T_tensor(p):
-    return jnp.array([1 - p, p])/(max(1-p, p))
+    return jnp.array([1 - p, p])
 
 
 def Q_tensor(m):
