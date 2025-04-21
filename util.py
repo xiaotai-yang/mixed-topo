@@ -122,7 +122,9 @@ def define_B_and_C(n):
                 if e not in setC:
                     setC.add(e)
     C_vertex_boundary = [(n, 2 * n + i) for i in range(n + 1)]
-
+    for i in range(n+1):
+        setC.remove(((n+i, 0), 'H'))
+        setC.remove(((n+i, 3 * n - 1), 'H'))
     def left_below_edges(r, c):
         res = []
         if r > 0: res.append(((r, c - 1), 'H'))
@@ -156,6 +158,16 @@ def plot_regions(n):
     setA = setA.intersection(allEdges)
     setB = setB.intersection(allEdges)
     setC = setC.intersection(allEdges)
+    bdy = []
+    for i in range(n+2):
+        bdy.append(((0, n - 1 + i), 'H'))
+    bdy.append(((0, n - 1), 'V'))
+    bdy.append(((0, 2*n +  1), 'V'))
+    for i in range(n - 1):
+        bdy.append(((n - 1 - i, i), 'H'))
+        bdy.append(((n - 1 - i, i), 'V'))
+        bdy.append(((n - 1 - i, 3 * n - 1 - i), 'H'))
+        bdy.append(((n - 1 - i, 3 * n - i), 'V'))
     plt.figure(figsize=(7, 7))
 
     # Plot all edges in A (blue)
@@ -191,11 +203,21 @@ def plot_regions(n):
             x2, y2 = c, r + 1
         plt.plot([x1, x2], [y1, y2], color='green', lw=2, alpha=0.5)
 
+    for edge in bdy:
+        (r, c), typ = edge
+        if typ == 'H':
+            x1, y1 = c, r
+            x2, y2 = c + 1, r
+        else:
+            x1, y1 = c, r
+            x2, y2 = c, r + 1
+        plt.plot([x1, x2], [y1, y2], color='black', lw=2, alpha=1.0)
     # Add a legend manually.
     from matplotlib.lines import Line2D
     legend_elements = [Line2D([0], [0], color='blue', lw=2, label='Region A'),
                        Line2D([0], [0], color='red', lw=2, label='Region B'),
-                       Line2D([0], [0], color='green', lw=2, label='Region C')]
+                       Line2D([0], [0], color='green', lw=2, label='Region C'),
+                       Line2D(xdata=[0], ydata=[0], color='black', lw=2, label='Boundary')]
     plt.legend(handles=legend_elements, loc='upper right')
 
     plt.title("Regions A (blue), B (red), C (green)")
@@ -431,7 +453,7 @@ def full_tensor(m, p):
     tensor_list.append(Q)
     for i in range(4):
         tensor_list.append(T)
-    einsum_str = 'ijkl,ia, jb, kc, ld->abcd'
+    einsum_str = 'ijkl, ia, jb, kc, ld->abcd'
 
     return jnp.einsum(einsum_str, *tensor_list)
 
@@ -478,18 +500,32 @@ def inner_Q_tensor(m, p):
 
 
 def inner_edge_tensor(m, p):
-    tensor_list = []
     Q = incomplete_Q_tensor(m)
     T = T_tensor(p)
-    tensor_list.append(Q)
     einsum_str = 'ijk, ja->iak'
 
     return jnp.einsum(einsum_str, Q, T)
 
-def inner_corner_tensor(m, p):
-    tensor_list = []
+def inner_edge_corner_start_tensor(m, p):
+    Q = incomplete_Q_tensor(m)
+    T = T_tensor(p)
+    einsum_str = 'ijk, ia, jb->abk'
+    return jnp.einsum(einsum_str, Q, T, T)
+
+def inner_edge_corner_end_tensor(m, p):
+    Q = incomplete_Q_tensor(m)
+    T = T_tensor(p)
+    einsum_str = 'ijk, ja, kb->iab'
+    return jnp.einsum(einsum_str, Q, T, T)
+
+def inner_corner_start_tensor(m, p):
     Q = corner_Q_tensor(m)
     T = T_tensor(p)
-    tensor_list.append(Q)
-    einsum_str = 'ij, ia->aj'
+    einsum_str = 'ij, ja -> ia'
+    return jnp.einsum(einsum_str, T, Q)
+
+def inner_corner_end_tensor(m, p):
+    Q = corner_Q_tensor(m)
+    T = T_tensor(p)
+    einsum_str = 'ij, ja->ia'
     return jnp.einsum(einsum_str, Q, T)
